@@ -3,25 +3,26 @@
 Lyze - the main class of mlyzed library. Used to calculate MSD.  
 """
 
-import os 
 import numpy as np
 from tqdm import tqdm, trange
-import ase
 from ase.io import read
-from pymatgen.io.vasp.outputs import Vasprun
-from pymatgen.io.cif import CifWriter
-from pymatgen.core import Structure
-from scipy import stats
-from scipy.stats import linregress
 #from sklearn.linear_model import LinearRegression as linregress_w
-
-
 
 __version__ = "0.1"
 
 class Lyze:
     
     def __init__(self, verbose = True):
+        
+        """
+        Initialization of Lyze object
+        
+        Parameters
+        ----------
+        
+        verbose: boolean, True by default
+            print additional information
+        """
         
         self.verbose = verbose
         # the trick was taken from the kinisi project (https://github.com/bjmorgan/kinisi)
@@ -35,7 +36,15 @@ class Lyze:
                                         'yz': np.s_[1:],
         }
 
-    def read_atoms(self, atoms_list, unwrap = True):
+
+
+    def _map_atomic_types(self, atom_types_mapper, numbers):
+        u,inv = np.unique(numbers,return_inverse = True)
+        return np.array([atom_types_mapper[x] for x in u])[inv].reshape(numbers.shape)
+
+
+
+    def read_atoms(self, atoms_list, unwrap = True, atom_types_mapping = None):
 
         """
         Read list of Ase's atoms
@@ -49,25 +58,69 @@ class Lyze:
         unwrap: boolean, True by default
             perform unwrapping of the coordinates
 
-        Returns
-        ---------- 
+        Examples
+        --------
+
+        >>> from ase.io import read
+        >>> from mlyzed import Lyze
+        >>> atoms_list = read('MD_file.traj', index = ':')
+        >>> calc = Lyze()
+        >>> calc.read_atoms(atoms_list, unwrap = True)
+
+        """
+        structures = atoms_list
+        self.atoms = structures[-1]
+        if atom_types_mapping:
+            for st in structures:
+                st.symbols = self._map_atomic_types(atom_types_mapping, st.numbers)
+
+        self._cells = np.array([st.cell for st in structures])
+        self.symbols = np.array(structures[0].symbols)
         
-        stores a list of ase.atoms objects in self.structures
+        if unwrap:
+            unwrapped = self.unwrap(structures)
+            trajectory = np.array([np.dot(unwrapped[:, i, :], cell) for i, cell in enumerate(self._cells)])
+            self.trajectory_scaled = unwrapped
+        else:
+            trajectory = np.array([atoms.positions for atoms in structures])
+            self.trajectory_scaled = np.hstack([a.cell.scaled_positions(a.positions)[:, None] for a in structures])
+            
+        self.trajectory = trajectory.swapaxes(0,1)
+
+
+
+    def read_file(self, file, index = ':', unwrap = True,  atom_types_mapping = None, **kwargs):
         
         """
-        self.structures = atoms_list
-        self._cells = np.array([st.cell for st in self.structures])
-        if unwrap:
-            unwrapped = self.unwrap()
-            trajectory = np.array([np.dot(unwrapped[:, i, :], cell) for i, cell in enumerate(self._cells)])
-            self.trajectory = trajectory.swapaxes(0,1)
-        else:
-            self.trajectory = np.array([atoms.positions for atoms in self.structures]).swapaxes(0,1)
-        return self.structures
+        Read VASP/LAMMPS generated XDATCAR/.xml/.lammpstrj file
+        
+        Parameters
+        ----------
+        
+        file: str
+            path to the file (XDATCAR, .xml)
+
+        unwrap: boolean, True by default
+            perform unwrapping of the coordinates
+            
+        kwargs: dict
+            aditional parameters of ase.io.read method
+
+        Examples
+        --------
+
+        >>> from mlyzed import Lyze
+        >>> calc = Lyze()
+        >>> calc.read_file('MD_file.traj', unwrap = True)
+        
+        """
+
+        structures = read(file, index = index, **kwargs)
+        self.read_atoms(structures, unwrap = unwrap, atom_types_mapping=atom_types_mapping)
 
 
 
-    def read_file(self, file, index = ':', species = None, unwrap = True, **kwargs):
+    def read_files(self, files, index = ':', unwrap = True, atom_types_mapping = None, **kwargs):
         
         """
         Read VASP/lammps generated XDATCAR/.xml/.lammpstrj file
@@ -83,60 +136,23 @@ class Lyze:
             
         kwargs: dict
             aditional parameters of ase.io.read method
-        Returns
-        ---------- 
-        
-        stores a list of ase.atoms objects in self.structures
+
+        Examples
+        --------
+
+        >>> from mlyzed import Lyze
+        >>> calc = Lyze()
+        >>> files = ['MD_file_1.traj', 'MD_file_2.traj']
+        >>> calc.read_files(files)
         
         """
-        self.structures = ase.io.read(file, index = index, **kwargs)
-        self._cells = np.array([st.cell for st in self.structures])
-        if unwrap:
-            unwrapped = self.unwrap()
-            trajectory = np.array([np.dot(unwrapped[:, i, :], cell) for i, cell in enumerate(self._cells)])
-            self.trajectory = trajectory.swapaxes(0,1)
-        else:
-            self.trajectory = np.array([atoms.positions for atoms in self.structures]).swapaxes(0,1)
-        return self.structures
-
-
-
-    def read_files(self, files, index = ':', species = None, unwrap = True, **kwargs):
-        
-        """
-        Read VASP/lammps generated XDATCAR/.xml/.lammpstrj file
-        
-        Parameters
-        ----------
-        
-        file: str
-            path to the file (XDATCAR, .xml)
-
-        unwrap: boolean, True by default
-            perform unwrapping of the coordinates
-            
-        kwargs: dict
-            aditional parameters of ase.io.read method
-        Returns
-        ---------- 
-        
-        stores a list of ase.atoms objects in self.structures
-        
-        """
-        self.structures = []
+        structures = []
         for file in files:
-            self.structures.extend(ase.io.read(file, index = index, **kwargs))
-        self._cells = np.array([st.cell for st in self.structures])
-        if unwrap:
-            unwrapped = self.unwrap()
-            trajectory = np.array([np.dot(unwrapped[:, i, :], cell) for i, cell in enumerate(self._cells)])
-            self.trajectory = trajectory.swapaxes(0,1)
-        else:
-            self.trajectory = np.array([atoms.positions for atoms in self.structures]).swapaxes(0,1)
-        return self.structures
+            structures.extend(read(file, index = index, **kwargs))
+        self.read_atoms(structures, unwrap = unwrap, atom_types_mapping=atom_types_mapping)
 
 
-    def unwrap(self, sequence = None):
+    def unwrap(self, structures, sequence = None):
 
         """ Unwrapper of the MD sequence of atomic coordinates subject 
         to periodic boundary conditions.
@@ -153,13 +169,12 @@ class Lyze:
 
         Returns
         ----------
-        np.array of shape (n_atoms, n_steps, n_dimension)
-            unwrapped sequence 
+        unwrapped: np.array of shape (n_atoms, n_steps, n_dimension)
+            unwrapped sequence of coordinates
+
         """
         if not np.any(sequence):
-            positions = []
-            for a in self.structures:
-                positions.append(a.cell.scaled_positions(a.positions)[:, None])
+            positions = [a.cell.scaled_positions(a.positions)[:, None] for a in structures]
             positions = np.hstack(positions)
         else:
             positions = sequence
@@ -201,17 +216,30 @@ class Lyze:
         com: boolean, False by default
             calculate msd of the center of mass
             Note: Not well tested!
+
         Returns
         ---------- 
         
-        dt, md - np.arrays, time (in ps) and MSD, respectively
+        dt: np.array
+            time in ps
+        msd: np.array
+            MSD
+
+        Examples
+        --------
+
+        >>> from mlyzed import Lyze
+        >>> calc = Lyze()
+        >>> calc.read_file('MD_trajectory.traj')
+        >>> dt, msd = calc.classical_msd(specie = 'Li', timestep = 2)
         
         """
+
         if projection not in self._projection_key_mapper.keys():
             raise
         traj = self.trajectory[:, skip:, :]
-        specie_idx = [i for i, s in enumerate(self.structures[0].symbols) if s == specie]
-        framework_idx = [i for i, s in enumerate(self.structures[0].symbols) if s != specie]
+        specie_idx = np.argwhere(self.symbols == specie).ravel()
+        framework_idx = np.argwhere(self.symbols != specie).ravel()
         disp = traj[:,0,:][:, None] - traj[:,:,:]
         if correct_drift:
             disp -= disp[framework_idx, :, :].mean(axis = 0)[None, :]
@@ -228,15 +256,14 @@ class Lyze:
     
 
 
+    def fft_msd(self, specie = None, timestep = 1.0):
 
-
-    def fft_msd(self, timestep = 1.0, specie = 'Na'):
-
-        """        
-        Calculate MSD using fast fourier transform 
         # adopted from
         # https://stackoverflow.com/questions/69738376/how-to-optimize-mean-square-displacement
         # -for-several-particles-in-two-dimensions/69767209#69767209
+
+        """        
+        Calculate MSD using a fast Fourier transform algorithm
  
         Parameters
         ----------
@@ -249,12 +276,24 @@ class Lyze:
 
         Returns
         ---------- 
-        dt, md - np.arrays, time (in ps) and MSD, respectively
+        
+        dt: np.array
+            time in ps
+        msd: np.array
+            MSD
+
+        Examples
+        --------
+
+        >>> from mlyzed import Lyze
+        >>> calc = Lyze()
+        >>> calc.read_file('MD_trajectory.traj')
+        >>> dt, msd = calc.fft_msd(specie = 'Li', timestep = 2)
         
         """
 
-        specie_idx = [i for i, s in enumerate(self.structures[0].symbols) if s == specie]
-        framework_idx = [i for i, s in enumerate(self.structures[0].symbols) if s != specie]
+        specie_idx = np.argwhere(self.symbols == specie).ravel()
+        framework_idx = np.argwhere(self.symbols != specie).ravel()
 
         pos = self.trajectory[specie_idx,: , :]
         nTime=pos.shape[1]        
@@ -300,13 +339,28 @@ class Lyze:
         Returns
         ---------- 
         
-        dt, msd_mean, msd_std and list of msd for each split - np.arrays, time (in ps) and MSD, respectively
+        dt: np.array
+            time in ps
+        msd_mean: np.array
+            average MSD
+        msd_std: np.array
+            std of MSD
+        
+
+        Examples
+        --------
+
+        >>> from mlyzed import Lyze
+        >>> calc = Lyze()
+        >>> calc.read_file('MD_trajectory.traj')
+        >>> dt, msd, msd_std = calc.block_msd(specie = 'Li', timestep = 2, n_blocks = 10)
+        
         """
-        specie_idx = [i for i, s in enumerate(self.structures[0].symbols) if s == specie]
-        framework_idx = [i for i, s in enumerate(self.structures[0].symbols) if s != specie]
+        specie_idx = np.argwhere(self.symbols == specie).ravel()
+        framework_idx = np.argwhere(self.symbols != specie).ravel()
 
         dts, msds = [], []
-        blocks = np.arange(skip, self.trajectory.shape[1], self.trajectory.shape[1] // n_blocks)
+        blocks = np.arange(skip, self.trajectory.shape[1], (self.trajectory.shape[1] - skip)// n_blocks)
         for start, stop in zip(blocks[0:-1], blocks[1:]):
             traj = self.trajectory[:, start:stop, :]
             disp = traj[:,0,:][:, None] - traj[:,:,:]
@@ -315,68 +369,14 @@ class Lyze:
             dt = timestep * np.arange(0, len(msd)) / 1000
             dts.append(dt)
             msds.append(msd)
-        return dts, msds
+        return dts[0], np.mean(msds, axis = 0), np.std(msds, axis = 0)
     
-
-
-
-    def split_msd(self, timestep = 1.0, specie = 'Li', projection = 'xyz', split_size = 50):
-
-
-        """
-        
-        Split trajectory on N parts of split_size size and calculate
-        classical MSD for each split from dr = r(t = 0) - r(t). 
-        Allows obtaining errors of MSD.
-        
-        Parameters
-        ----------
-        
-        timestep: int, 1 by default
-            time step in fs
-            
-        specie: str, e.g. 'Li'
-            species for which MSD should be calculated 
-
-        projection: str, allowed values are 'xyz', 'x', 'y', 'z'
-            projection which MSD will be calculated for
-
-        split_size: float, 50 by default
-            size of the split in ps 
-            
-        Returns
-        ---------- 
-        
-        dt, msd_mean, msd_std and list of msd for each split - np.arrays, time (in ps) and MSD, respectively
-        
-        """
-
-        traj_len = self.trajectory.shape[1]
-        split_size = int(np.floor(split_size * 1000 / timestep))
-        n_splits = int(np.floor(traj_len / split_size))
-        splits = [self.trajectory[:, i * split_size: (i + 1) * split_size, :] for i in range(n_splits)]
-        
-        specie_idx = [i for i, s in enumerate(self.structures[0].symbols) if s == specie]
-        framework_idx = [i for i, s in enumerate(self.structures[0].symbols) if s != specie]
-        
-        msds = []
-        if projection == 'xyz':
-            for split in splits:
-                disp = split[:,0,:][:, None] - split[:,:,:]
-                msd = np.square(disp[specie_idx, :, :]).sum(axis = 2).mean(axis = 0)
-                msds.append(msd)
-                
-        msd = np.array(msds).mean(axis = 0)
-        msd_std = np.array(msds).std(axis = 0)
-        dt = timestep * np.arange(0, len(msd)) / 1000
-
-        return dt, msd, msd_std
-        
         
 
     def windowed_msd(self, n_frames = 75, timestep = 1.0, specie = 'Na', N_bootstraps = 0):
 
-        """ Calculate windowed (time averaged) MSD for selected specie. 
+        """ 
+        Calculate windowed (time averaged) MSD for the selected specie. 
         Supposed to work the same way as MDAnalysis.
 
 
@@ -393,14 +393,26 @@ class Lyze:
             lagtimes
         msd: np.array
             mean squared displacements of selected specie
-        msd_std:
+        msd_std: np.array
             standard deviation errors of msd
+
+        msd_all: list
+            msds for all frames
+
+        Examples
+        --------
+
+        >>> from mlyzed import Lyze
+        >>> calc = Lyze()
+        >>> calc.read_file('MD_trajectory.traj')
+        >>> dt, msd, msd_std, msd_all = calc.windowed_msd(specie = 'Li', timestep = 2, n_frames = 75)
+
         """
 
         self.timestep = timestep
 
-        specie_idx = [i for i, s in enumerate(self.structures[0].symbols) if s == specie]
-        framework_idx = [i for i, s in enumerate(self.structures[0].symbols) if s != specie]
+        specie_idx = np.argwhere(self.symbols == specie).ravel()
+        framework_idx = np.argwhere(self.symbols != specie).ravel()
 
 
         lagtimes = np.round(np.linspace(10, self.trajectory.shape[1] - 1, n_frames))
@@ -443,16 +455,48 @@ class Lyze:
 
         return dt, msds, msds_std, msds_all
 
-
-
-    @staticmethod
-    def _get_range(x, y, region):
-        
-        region = np.array(region)
-        x_new = x[(x < region.max())&(x > region.min())]
-        if len(y.shape) == 1:
-            y_new = y[(x < region.max())&(x > region.min())]
-        else:
-            y_new = y[:,(x < region.max())&(x > region.min())]
-        return x_new, y_new
     
+
+    def probability_density(self, specie, resolution = 0.2):
+
+        """
+        Calculate a time-average probability density function of a selected specie
+        
+        Note: Works properly for NVT simulations only!
+
+        Parameters:
+        ----------
+        specie: str
+            chemical symbol
+
+        resolution: float
+            grid resolution in angstroms
+
+        Returns
+        -------
+
+        hist: np.array
+            probability density distribution 
+
+        Examples
+        --------
+
+        >>> from mlyzed import Lyze
+        >>> from mlyzed.utils import write_grd
+        >>> calc = Lyze()
+        >>> calc.read_file('MD_trajectory.traj')
+        >>> hist = calc.probability_density('Li', resolution = 0.2)
+        >>> write_grd(hist, calc.atoms, 'proba_file.grd')
+
+        """
+        
+        specie_idx = np.argwhere(self.symbols == specie).ravel()
+        scaled_traj = self.trajectory_scaled[specie_idx, :, :]
+        scaled_traj -=np.floor(scaled_traj)
+        bins = list(map(int, (np.diag(self._cells[0]) / resolution)))
+        voxels = (scaled_traj * bins).astype(int)
+        hist = np.zeros((bins), np.uint16)
+        for point in np.vstack(voxels):
+            hist[point[0], point[1], point[2]] += 1
+        hist = hist / hist.sum() * (hist.shape[0] * hist.shape[1] * hist.shape[2]) /  np.linalg.det(self._cells[-1])
+        return hist

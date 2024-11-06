@@ -1,4 +1,10 @@
 minimum_example.ipynb
+tutorial.ipynb
+full.ipynb
+*cif
+*grd
+*.traj
+misc.py
 
 
 
