@@ -12,6 +12,18 @@
 #
 import os
 import sys
+
+# Define the canonical URL if you are using a custom domain on Read the Docs
+html_baseurl = os.environ.get("READTHEDOCS_CANONICAL_URL", "")
+
+# Tell Jinja2 templates the build is running on Read the Docs
+if os.environ.get("READTHEDOCS", "") == "True":
+    if "html_context" not in globals():
+        html_context = {}
+    html_context["READTHEDOCS"] = True
+    
+
+
 sys.path.insert(0, os.path.abspath('../..'))
 sys.path.insert(1, os.path.abspath('../../'))
 
@@ -44,7 +56,7 @@ extensions = [
 ]
 
 #add_module_names = False
-autodoc_mock_imports = ["ase"]
+autodoc_mock_imports = ["ase", "numpy", "tqdm"]
 
 mathjax_config = {
     'TeX': {'equationNumbers': {'autoNumber': 'AMS', 'useLabelIds': True}},
