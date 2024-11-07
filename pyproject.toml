@@ -1,3 +1,18 @@
 [build-system]
 requires = ["setuptools"]
 build-backend = "setuptools.build_meta"
+
+dependencies = [
+  "numpy",
+  "scipy",
+  "ase"
+]
+
+[project]
+version = "0.1"
+name = "mlyzed"
+authors = [{name = "Artem Dembitskiy", email = "art.dembitskiy@gmail.com"}]
+readme = "README.md"
+license = {file = "LICENSE"}
+keywords = ["MD", "diffusion", "conductivity", "unwrap"]
+

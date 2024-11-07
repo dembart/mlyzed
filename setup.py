@@ -7,10 +7,9 @@ setuptools.setup(
      name='mlyzed',  
      version='0.1',
      py_modules = ["mlyzed"],
-     install_requires = ["numpy",
-#                         "pandas",
-#                         "scipy>=1.7.0",
-#                         "pymatgen>=2022.5.26",
+     install_requires = [
+                         "numpy",
+                         "scipy",
                          "ase",
                          ],
      author="Artem Dembitskiy",

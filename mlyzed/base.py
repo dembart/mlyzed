@@ -6,7 +6,6 @@ Lyze - the main class of mlyzed library. Used to calculate MSD.
 import numpy as np
 from tqdm import tqdm, trange
 from ase.io import read
-#from sklearn.linear_model import LinearRegression as linregress_w
 
 __version__ = "0.1"
 
@@ -23,6 +22,8 @@ class Lyze:
         verbose: boolean, True by default
             print additional information
         """
+
+        print('dev version')
         
         self.verbose = verbose
         # the trick was taken from the kinisi project (https://github.com/bjmorgan/kinisi)
@@ -35,7 +36,6 @@ class Lyze:
                                         'xz': np.s_[::2],
                                         'yz': np.s_[1:],
         }
-
 
 
     def _map_atomic_types(self, atom_types_mapper, numbers):
@@ -68,22 +68,20 @@ class Lyze:
         >>> calc.read_atoms(atoms_list, unwrap = True)
 
         """
-        structures = atoms_list
-        self.atoms = structures[-1]
-        if atom_types_mapping:
-            for st in structures:
-                st.symbols = self._map_atomic_types(atom_types_mapping, st.numbers)
 
-        self._cells = np.array([st.cell for st in structures])
-        self.symbols = np.array(structures[0].symbols)
+        self.atoms = atoms_list[-1].copy()
+        if atom_types_mapping:
+            self.atoms.symbols = self._map_atomic_types(atom_types_mapping, self.atoms.numbers)
+        self.symbols = np.array(self.atoms.symbols)
+        self._cells = np.array([st.cell for st in atoms_list])
         
         if unwrap:
-            unwrapped = self.unwrap(structures)
+            unwrapped = self.unwrap(atoms_list)
             trajectory = np.array([np.dot(unwrapped[:, i, :], cell) for i, cell in enumerate(self._cells)])
             self.trajectory_scaled = unwrapped
         else:
-            trajectory = np.array([atoms.positions for atoms in structures])
-            self.trajectory_scaled = np.hstack([a.cell.scaled_positions(a.positions)[:, None] for a in structures])
+            trajectory = np.array([atoms.positions for atoms in atoms_list])
+            self.trajectory_scaled = np.hstack([a.cell.scaled_positions(a.positions)[:, None] for a in atoms_list])
             
         self.trajectory = trajectory.swapaxes(0,1)
 
@@ -115,8 +113,8 @@ class Lyze:
         
         """
 
-        structures = read(file, index = index, **kwargs)
-        self.read_atoms(structures, unwrap = unwrap, atom_types_mapping=atom_types_mapping)
+        atoms_list = read(file, index = index, **kwargs)
+        self.read_atoms(atoms_list, unwrap = unwrap, atom_types_mapping=atom_types_mapping)
 
 
 
@@ -146,13 +144,13 @@ class Lyze:
         >>> calc.read_files(files)
         
         """
-        structures = []
+        atoms_list = []
         for file in files:
-            structures.extend(read(file, index = index, **kwargs))
-        self.read_atoms(structures, unwrap = unwrap, atom_types_mapping=atom_types_mapping)
+            atoms_list.extend(read(file, index = index, **kwargs))
+        self.read_atoms(atoms_list, unwrap = unwrap, atom_types_mapping=atom_types_mapping)
 
 
-    def unwrap(self, structures, sequence = None):
+    def unwrap(self, atoms_list, sequence = None):
 
         """ Unwrapper of the MD sequence of atomic coordinates subject 
         to periodic boundary conditions.
@@ -174,7 +172,7 @@ class Lyze:
 
         """
         if not np.any(sequence):
-            positions = [a.cell.scaled_positions(a.positions)[:, None] for a in structures]
+            positions = [a.cell.scaled_positions(a.positions)[:, None] for a in atoms_list]
             positions = np.hstack(positions)
         else:
             positions = sequence
@@ -499,3 +497,39 @@ class Lyze:
             hist[point[0], point[1], point[2]] += 1
         hist = hist / hist.sum() * (hist.shape[0] * hist.shape[1] * hist.shape[2]) /  np.linalg.det(self._cells[-1])
         return hist
+    
+
+class MeanSquaredDisplacement:
+
+    def __init__(self, dt, msd, msd_err = None, temperature = None):
+
+        self.dt = dt
+        self.msd = msd 
+        self.msd_err = msd_err 
+
+    def plot(self):
+        pass
+
+
+    def fit_line(self):
+        pass
+
+    @property
+    def diffusivity(self):
+        pass
+
+    def conductivity(self):
+        pass
+
+    def set_fit_parameters(self):
+        pass
+
+
+    def get_units(self):
+
+        units = {
+            'diffusivity': 'cm^2 / s',
+            'conductivity': 'S / cm',
+            'msd': 'Angstrom^2',
+            'dt': 'Angstrom^2'
+            } 
