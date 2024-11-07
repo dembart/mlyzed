@@ -460,11 +460,10 @@ class Lyze:
     def probability_density(self, specie, resolution = 0.2):
 
         """
-        Calculate a time-average probability density function of a selected specie
-        
-        Note: Works properly for NVT simulations only!
+        Calculate a time-average probability density function of a selected specie.
+        Warning! Works properly for NVT simulations only!
 
-        Parameters:
+        Parameters
         ----------
         specie: str
             chemical symbol

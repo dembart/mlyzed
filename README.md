@@ -14,7 +14,7 @@ git clone https://github.com/dembart/mlyzed
 cd mlyzed
 pip install .
 ```
-#### Minimum usage exmaple
+#### Minimum usage example
 
 ```python
 from mlyzed import Lyze
