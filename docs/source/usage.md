@@ -1,4 +1,4 @@
-#### Minimum usage exmaple
+# Minimum usage exmaple
 
 ```python
 from mlyzed import Lyze

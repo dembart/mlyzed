@@ -1,7 +1,7 @@
 # API
 
 ```{eval-rst}
-.. autoclass:: mlyzed.Lyze
+.. autoclass:: mlyzed.base.Lyze
    :members:
    :undoc-members:
    :show-inheritance:
