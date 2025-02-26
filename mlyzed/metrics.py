@@ -9,6 +9,13 @@ def root_mean_squared_error(y, y_hat):
     rmse = np.sqrt(np.square(y - y_hat).mean())
     return rmse
 
+def r2_score(y, y_hat):
+    residuals = y - y_hat
+    ss_res = np.sum(residuals**2)
+    ss_tot = np.sum((y-np.mean(y))**2)
+    r_squared = 1 - (ss_res / ss_tot)
+    return r_squared
+    
 
 def _eval(traj_true, traj_pred):
     metrics = {

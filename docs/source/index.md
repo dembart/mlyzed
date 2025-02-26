@@ -10,7 +10,6 @@
 
 installation
 usage
-lyze_
 
 ```
 ```

@@ -1,6 +1,6 @@
 #### About
 
-mlyzed is a small library for post-processing molecular dynamics (MD) simulations. The main features of the code are trajectory unwrapping, FFT calculation of the MSD, and ease of use. 
+mlyzed is the python library for post-processing molecular dynamics (MD) simulations. The main features of the code are trajectory unwrapping, FFT calculation of the MSD, analysis of the hop events, and ease of use. 
 
 <i>Note: The library is not guaranteed to be bug free. If you observe unexpected results, errors, please report  an issue at the github.</i>
 
@@ -17,25 +17,25 @@ pip install .
 #### Minimum usage example
 
 ```python
-from mlyzed import Lyze
-calc = Lyze()
-traj = calc.read_file('traj.lammpstrj') # can be XDATCAR, OUTCAR, extxyz
-dt, msd = calc.classical_msd(
-                            specie = 'Li', # specie of interest
-                            timestep = 2,  # in fs
-                            skip = 1000,   # skip first 1000 steps
-                            )
+import mlyzed as md
+traj = md.Trajectory.from_file('traj.lammpstrj') # can be XDATCAR, OUTCAR, extxyz, etc
+
+msd = md.classical_msd(traj[100:], # skip first 100 steps
+                       specie = 'Li', # specie of interest
+                       timestep = 2,  # in fs
+                       )
+msd.plot()
 ```
 
 
 #### Alternatives:
 
 Here are some alternatives and inspirations for this library (see below). You may find them better in some ways.
-
-* [pymatgen-diffusion-analysis](https://github.com/materialsvirtuallab/pymatgen-analysis-diffusion)  
+* [mdtraj](https://github.com/mdtraj/mdtraj) - a huge inspiration to this library
+* [pymatgen-diffusion-analysis](https://github.com/materialsvirtuallab/pymatgen-analysis-diffusion)
 * [kinisi](https://github.com/bjmorgan/kinisi)
-* [MDAnalysis](https://www.mdanalysis.org/)  
-* [LLC_Membranes](https://github.com/shirtsgroup/LLC_Membranes)  
+* [MDAnalysis](https://www.mdanalysis.org/)
+* [LLC_Membranes](https://github.com/shirtsgroup/LLC_Membranes)
 
 
 

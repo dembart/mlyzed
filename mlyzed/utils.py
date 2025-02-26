@@ -59,46 +59,6 @@ def read_cfg(file):
 
 
 
-def write_grd(data, atoms, path):
-
-    """
-    Write probability density distribution volumetric file for VESTA 3.0.
-
-    Parameters
-    ----------
-    data: np.array of size LxMxN
-        volumetric data
-    
-    atoms: ase's Atoms object
-        atomic structure
-
-    path: str
-        path to save the file
-
-    Returns
-    ----------
-    nothing
-    """
-
-    voxels = data.shape[0] - 1, data.shape[1] - 1, data.shape[2] - 1
-    cellpars = atoms.cell.cellpar()
-
-    with open(path + '.grd', 'w+') as report:
-
-        report.write('mlyzed generated chgcar' + '\n')
-        report.write(''.join(str(p) + ' ' for p in cellpars).strip() + '\n')
-        report.write(''.join(str(v) + ' ' for v in voxels).strip() + '\n')
-
-        for i in range(voxels[0]):
-            for j in range(voxels[1]):
-                for k in range(voxels[2]):
-                    val = data[i, j, k]
-                    report.write(str(val) + '\n')
-    
-    print(f'File was written to {path}.grd\n')
-
-
-
 def diffusion_coefficient(slope, dim = 3):
 
     """
@@ -152,12 +112,19 @@ def conductivity(D, n, z, T):
 
 
 
-def _get_range(x, y, region):
+def get_range(x, y, region, yerr = None):
     
     region = np.array(region)
     x_new = x[(x < region.max())&(x > region.min())]
     if len(y.shape) == 1:
         y_new = y[(x < region.max())&(x > region.min())]
+        if np.any(yerr):
+            yerr_new = yerr[(x < region.max())&(x > region.min())]
     else:
         y_new = y[:,(x < region.max())&(x > region.min())]
-    return x_new, y_new
+        if np.any(yerr):
+            yerr_new = yerr[:,(x < region.max())&(x > region.min())]
+    if np.any(yerr):
+        return x_new, y_new, yerr_new
+    else:
+        return x_new, y_new

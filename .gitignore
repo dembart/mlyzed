@@ -5,7 +5,12 @@ full.ipynb
 *grd
 *.traj
 misc.py
+debug.ipynb
+*.ipynb
+*.png
 
+test_trajs
+*extxyz
 
 
 # Byte-compiled / optimized / DLL files
