@@ -9,6 +9,12 @@ For more details, see the [documentation](https://mlyzed.readthedocs.io/en/lates
 
 #### Installation
 
+```
+pip install mlyzed
+```
+
+or
+
 ```python
 git clone https://github.com/dembart/mlyzed
 cd mlyzed
