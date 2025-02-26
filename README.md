@@ -5,7 +5,7 @@ mlyzed is the python library for post-processing molecular dynamics (MD) simulat
 <i>Note: The library is not guaranteed to be bug free. If you observe unexpected results, errors, please report  an issue at the github.</i>
 
 
-For more details, see the [documentation](https://mlyzed.readthedocs.io/en/latest/).
+For more details, see the [documentation](https://mlyzed.readthedocs.io/en/latest/). (Not ready yet)
 
 #### Installation
 

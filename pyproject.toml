@@ -9,7 +9,7 @@ dependencies = [
 ]
 
 [project]
-version = "0.1"
+version = "0.2"
 name = "mlyzed"
 authors = [{name = "Artem Dembitskiy", email = "art.dembitskiy@gmail.com"}]
 readme = "README.md"

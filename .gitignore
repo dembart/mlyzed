@@ -1,17 +1,10 @@
-minimum_example.ipynb
-tutorial.ipynb
-full.ipynb
 *cif
 *grd
 *.traj
-misc.py
-debug.ipynb
 *.ipynb
 *.png
-
-test_trajs
 *extxyz
-
+!examples/minimum.ipynb
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

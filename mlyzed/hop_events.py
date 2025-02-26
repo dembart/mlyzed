@@ -59,7 +59,7 @@ def _detect_hop_events(reference_frame, current_frame, cutoff):
 
 
 
-def hops_statistics(trajectory, specie, filter_step, frame_step, cutoff, start_id = 0):
+def hops_statistics(trajectory, specie = None, filter_step = 1, frame_step = 1, cutoff = 4.0):
 
     """
     Calculate statistics of the hop events
@@ -94,7 +94,6 @@ def hops_statistics(trajectory, specie, filter_step, frame_step, cutoff, start_i
     """
 
     traj = trajectory[:, trajectory.symbols == specie]
-    traj = trajectory[start_id:]
     if filter_step > 1:
         traj.trajectory = moving_average(traj.trajectory.copy(), filter_step)
         traj = traj[:-(filter_step-1)]
