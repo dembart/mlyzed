@@ -5,7 +5,10 @@ build-backend = "setuptools.build_meta"
 dependencies = [
   "numpy",
   "scipy",
-  "ase"
+  "ase",
+  "vesin",
+  "tqdm",
+  "networkx",
 ]
 
 [project]

@@ -18,12 +18,9 @@ pip install .
 
 ```python
 import mlyzed as md
-traj = md.Trajectory.from_file('traj.lammpstrj') # can be XDATCAR, OUTCAR, extxyz, etc
 
-msd = md.classical_msd(traj[100:], # skip first 100 steps
-                       specie = 'Li', # specie of interest
-                       timestep = 2,  # in fs
-                       )
+traj = md.Trajectory.from_file('traj.lammpstrj') # any ASE readable format
+msd = md.classical_msd(traj[100:], specie = 'Li', timestep = 2)
 msd.plot()
 ```
 
