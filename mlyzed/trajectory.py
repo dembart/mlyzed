@@ -1,30 +1,26 @@
 import numpy as np
 from ase import Atoms
-from ase.cell import Cell
 from ase.io import read, write
 from tqdm import trange, tqdm 
-from .msd import MSD
-from .pdf import PDF
-
-
-def _map_atomic_types(self, atom_types_mapper, numbers):
-    u,inv = np.unique(numbers,return_inverse = True)
-    return np.array([atom_types_mapper[x] for x in u])[inv].reshape(numbers.shape)
+from ase.data import atomic_masses, atomic_numbers, chemical_symbols
 
 
 
 class Trajectory:
-
     
-    def __init__(self, symbols = None, positions = None, cells = None):
+    def __init__(self, numbers = None, positions = None, cells = None):
 
         assert positions.ndim == 3
-        self.symbols = symbols 
+        self.numbers = numbers
+        if np.any(numbers):
+            self.symbols = np.array([chemical_symbols[n] for n in numbers])
         self.positions = positions
         self.cells = cells
-        
+
+
+
     @classmethod
-    def from_atoms_list(cls, atoms_list, unwrap = True, atom_types_mapping = None):
+    def from_atoms_list(cls, atoms_list, unwrap = True):
 
         """
         Read list of Ase's atoms
@@ -41,33 +37,29 @@ class Trajectory:
         Examples
         --------
 
+        >>> import mlyzed as md
         >>> from ase.io import read
-        >>> from mlyzed import Lyze
         >>> atoms_list = read('MD_file.traj', index = ':')
-        >>> traj = md.Trajectory(atoms_list)
+        >>> traj = md.Trajectory.from_atoms_list(atoms_list)
+        >>> del atoms_list
 
         """
-        
-        
-        if atom_types_mapping:
-            symbols = _map_atomic_types(atom_types_mapping, atoms_list[0].numbers)
-        else:
-            symbols = np.array(atoms_list[0].symbols)
-        
+        numbers = np.array(atoms_list[0].numbers)
         cells = np.array([st.cell for st in atoms_list])
-        #time = np.arange(len(atoms_list)) * timestep / 1000
         if unwrap:
             unwrapped = cls.unwrap(atoms_list)
             positions = np.array([np.dot(unwrapped[:, i, :], cell) for i, cell in enumerate(cells)])
         else:
             positions = np.array([atoms.positions for atoms in atoms_list])
-        return cls(symbols = symbols, positions = positions, cells = cells)
+        return cls(numbers = numbers, positions = positions, cells = cells)
+        
 
     
     @staticmethod
     def unwrap(atoms_list, sequence = None):
 
-        """ Unwrapper of the MD sequence of atomic coordinates subject 
+        """
+        Unwrapper of the MD sequence of atomic coordinates subject 
         to periodic boundary conditions.
 
         Minimum image principle is used to unwrap coordinates. It means, 
@@ -81,7 +73,7 @@ class Trajectory:
             self.traj will be used to generate sequence
 
         Returns
-        ----------
+        -------
         unwrapped: np.array of shape (n_atoms, n_steps, n_dimension)
             unwrapped sequence of coordinates
 
@@ -103,8 +95,106 @@ class Trajectory:
         unwrapped = positions + shift
         return unwrapped
     
+
+
+    def calculate_com(self):
+        """Calculate center of mass (COM).
+        
+        Returns
+        -------
+        
+        com: np.array of (N_frames, 3) shape
+            COM position evolution 
+
+        """
+        masses = np.array([atomic_masses[atomic_numbers[s]] for s in self.symbols])
+        total_mass = np.sum(masses)
+        com = np.sum(self.positions * masses[np.newaxis, :, np.newaxis], axis=1) / total_mass
+        return com
+
+
+
+    def correct_com_drift(self):
+        """Correct drift of the center of mass. In place operation"""
+        com = self.calculate_com()
+        self.positions -= com[:, np.newaxis, :]
+
+
+
+    def map_atomic_types(self, atomic_types_mapper):
+        
+        """
+        Update atomic types of the system.
+
+        Parameters
+        ----------
+        atomic_types_mapper: dict 
+            old atomic numbers are keys, new atomic numbers are values
+        
+        Examples
+        --------
+
+        >>> import mlyzed as md
+        >>> traj = md.Trajectory.from_file('traj.lammpstrj')
+        >>> traj.map_atomic_types({0: 3, 1: 8, 2: 15})
+
+        """
+        u,inv = np.unique(self.numbers,return_inverse = True)
+        self.numbers = np.array([atomic_types_mapper[x] for x in u])[inv].reshape(self.numbers.shape)
+        self.symbols = np.array([chemical_symbols[n]for n in self.numbers])
+
+
+
+    def number_density(self, specie):
+        """
+        Calculate number density of a given specie
+        
+        Update atomic types of the system
+
+        Parameters
+        ----------
+        specie: str
+            chemical symbol, e.g. "Li"
+        
+        Returns
+        -------
+        number density at each time step measured in cm^-3
+        Examples
+        --------
+
+        >>> import mlyzed as md
+        >>> traj = md.Trajectory.from_file('file.traj')
+        >>> n_mean = traj.number_density('Na').mean()
+
+        """
+        return (self.symbols == specie).sum() / np.linalg.det(self.cells) * 1e24
+
+
+
     @classmethod
     def from_file(cls, file):
+
+        """
+        Read trajectory file.
+
+        Parameters
+        ----------
+        file: str
+            trajectory fil
+        
+        Returns
+        -------
+
+        trajectory: mlyzed.Trajectory object
+            trajectory
+
+        Examples
+        --------
+
+        >>> import mlyzed as md
+        >>> traj = md.Trajectory.from_file('traj.lammpstrj')
+
+        """
         atoms_list = read(file, index = ':')
         return cls.from_atoms_list(atoms_list)
     
@@ -132,15 +222,16 @@ class Trajectory:
     def get_frame(self, index):
         cell = self.cells[index]
         positions = self.positions[index]
-        symbols = self.symbols
-        return Atoms(symbols = symbols, positions = positions, cell = cell, pbc = True)
+        numbers = self.numbers
+        return Atoms(numbers = numbers, positions = positions, cell = cell, pbc = True)
     
     
     def copy(self):
-        symbols = self.symbols.copy()
+        """Get copy of the trajectory"""
+        numbers = self.numbers.copy()
         positions = self.positions.copy()
         cells = self.cells.copy()
-        return self.__class__(symbols = symbols, positions = positions, cells = cells)
+        return self.__class__(numbers = numbers, positions = positions, cells = cells)
 
 
     def __getitem__(self, key):
@@ -177,11 +268,11 @@ class Trajectory:
             new_cells = self.cells.copy()[frame_key]
 
         if isinstance(atom_key, int):
-            new_symbols = self.symbols.copy()[[atom_key]]  # Keep as array to preserve dimension
+            new_numbers = self.numbers.copy()[[atom_key]]  # Keep as array to preserve dimension
         else:
-            new_symbols = self.symbols.copy()[atom_key]
-        new_symbols = np.atleast_1d(new_symbols)
-        return self.__class__(new_symbols, new_positions, new_cells)
+            new_numbers = self.numbers.copy()[atom_key]
+        new_numbers = np.atleast_1d(new_numbers)
+        return self.__class__(new_numbers, new_positions, new_cells)
     
 
     def __repr__(self):
