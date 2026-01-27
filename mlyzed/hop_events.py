@@ -95,7 +95,7 @@ def hops_statistics(trajectory, specie = None, filter_step = 1, frame_step = 1, 
 
     traj = trajectory[:, trajectory.symbols == specie]
     if filter_step > 1:
-        traj.trajectory = moving_average(traj.trajectory.copy(), filter_step)
+        traj.positions = moving_average(traj.positions.copy(), filter_step)
         traj = traj[:-(filter_step-1)]
 
     n_steps = len(traj) // frame_step - 1
