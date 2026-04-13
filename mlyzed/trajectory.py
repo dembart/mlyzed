@@ -1,7 +1,7 @@
 import numpy as np
+from tqdm import trange, tqdm 
 from ase import Atoms
 from ase.io import read, write
-from tqdm import trange, tqdm 
 from ase.data import atomic_masses, atomic_numbers, chemical_symbols
 
 

@@ -2,9 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from scipy.optimize import curve_fit
 from uncertainties import ufloat
-from tqdm import tqdm, trange
-from ase.io import read
-from ase.data import atomic_masses
+from tqdm import tqdm
 
 
 

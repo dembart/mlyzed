@@ -7,14 +7,14 @@ from tqdm import tqdm
 
 
 def moving_average(positions, n_steps):
-    return uniform_filter1d(positions, n_steps, axis = 0, mode='constant', origin=-(n_steps//2))
+    return uniform_filter1d(positions, n_steps, axis=0, mode='constant', origin=-(n_steps//2))
 
 
 
 def _reference_site(reference_frame, current_frame):
 
     ref_states = []
-    for i, p in enumerate(current_frame.positions):
+    for _, p in enumerate(current_frame.positions):
         base = reference_frame.copy()
         base.append('X')
         base.positions[-1] = p
@@ -31,15 +31,15 @@ def _detect_hop_events(reference_frame, current_frame, cutoff):
     hoppers = np.where(reference_state - current_state)[0]
     calc = NeighborList(cutoff = cutoff, full_list=True)
 
-    i_ref, j_ref, d_ref = calc.compute(points = reference_frame.positions, box = reference_frame.cell, periodic = True, quantities='jid')
-    i_cur, j_cur, d_cur = calc.compute(points = current_frame.positions, box = current_frame.cell, periodic = True, quantities='jid')
+    i_ref, j_ref, d_ref = calc.compute(points=reference_frame.positions, box=reference_frame.cell, periodic=True, quantities='jid')
+    i_cur, j_cur, d_cur = calc.compute(points=current_frame.positions, box=current_frame.cell, periodic=True, quantities='jid')
     hoppers_moving_neighbors = {}
     for hopper in hoppers:
         nn_list_reference = np.unique(j_ref[i_ref == hopper])
         nn_list_current = np.unique(j_cur[i_cur == hopper])
         moving_neighbors = list(set(nn_list_reference) & set(nn_list_current) & set(hoppers))
         moving_neighbors.append(hopper)
-        moving_neighbors = np.array(moving_neighbors, dtype = int)
+        moving_neighbors = np.array(moving_neighbors, dtype=int)
         hoppers_moving_neighbors.update({hopper: (moving_neighbors)})
 
     edgelist = []
@@ -59,7 +59,7 @@ def _detect_hop_events(reference_frame, current_frame, cutoff):
 
 
 
-def hops_statistics(trajectory, specie = None, filter_step = 1, frame_step = 1, cutoff = 4.0):
+def hops_statistics(trajectory, specie=None, filter_step=1, frame_step=1, cutoff=4.0):
 
     """
     Calculate statistics of the hop events

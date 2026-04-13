@@ -1,21 +1,3 @@
 [build-system]
-requires = ["setuptools"]
+requires = ["setuptools", "wheel"]
 build-backend = "setuptools.build_meta"
-
-dependencies = [
-  "numpy",
-  "scipy",
-  "ase",
-  "vesin",
-  "tqdm",
-  "networkx",
-]
-
-[project]
-version = "0.2.2"
-name = "mlyzed"
-authors = [{name = "Artem Dembitskiy", email = "art.dembitskiy@gmail.com"}]
-readme = "README.md"
-license = {file = "LICENSE"}
-keywords = ["MD", "diffusion", "conductivity", "unwrap"]
-
